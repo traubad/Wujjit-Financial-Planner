@@ -24,6 +24,9 @@ EditableCell::EditableCell(std::string original_value, Wt::WContainerWidget* par
 
 Wt::Signal<EditableCell*>& EditableCell::updatedByUser()
 {
+    /* This method does not actually stage anything for updating. It just connects the listener
+     * to the signal. --TAT
+     */
 	std::cout<<"STAGED FOR UPDATE!"<<std::endl;
     return _stage_for_update;
 }
