@@ -13,9 +13,12 @@
 
 namespace DAL{
 
-	redisContext *c = redisConnect("localhost",6379);
+	redisContext *c = redisConnect("localhost",6379); //TODO Is this ok?  This means that the connection is always open...
 
-//TODO Create a clean way to check the output of redisCommands for failure and implement error handling on all redisCommands
+	/**TODO Create a clean way to check the output of redisCommands
+	 * for failure and implement error handling on all redisCommand calls*/
+
+	//TODO should I make some DRY optimizations to the hashNames to prevent typo slip-ups?
 
 
 	/* Function used for generating a generic ID.
@@ -24,10 +27,10 @@ namespace DAL{
 	std::string createID(std::string unregisteredList, std::string incrementingID){
 		redisReply *reply;
 
-		reply = redisCommand(c, (char*) ("lpop "+ unregisteredList)); //check unregistered ID's
+		reply = redisCommand(c, ("lpop "+ unregisteredList).c_str()); //check unregistered ID's
 
 		if(reply->type == REDIS_REPLY_NIL){ //if there are no id's from the unregistered list
-			reply = redisCommand(c, (char*) ("incr "+ incrementingID)); //create a new ID from the id counter
+			reply = redisCommand(c, ("incr "+ incrementingID).c_str()); //create a new ID from the id counter
 		}
 
 		std::string output = reply -> str;
@@ -60,13 +63,13 @@ namespace DAL{
 		std::string userID = createUserID();//userID for this user.
 		std::string hashName = "user:"+userID+":account"; //name of hash that will store this user's account information
 
-		redisCommand(c, (char*) ("hset " + hashName + " name "          + name));
-		redisCommand(c, (char*) ("hset " + hashName + " email "         + email));
-		redisCommand(c, (char*) ("hset " + hashName + " phone "         + phone));
-		redisCommand(c, (char*) ("hset " + hashName + " monthlyEmail "  + ( monthlyEmail ? "yes":"no")));
-		redisCommand(c, (char*) ("hset " + hashName + " emailOnUpdate " + (emailOnUpdate ? "yes":"no")));
+		redisCommand(c, ("hset " + hashName + " name "          + name).c_str());
+		redisCommand(c, ("hset " + hashName + " email "         + email).c_str());
+		redisCommand(c, ("hset " + hashName + " phone "         + phone).c_str());
+		redisCommand(c, ("hset " + hashName + " monthlyEmail "  + ( monthlyEmail ? "yes":"no")).c_str());
+		redisCommand(c, ("hset " + hashName + " emailOnUpdate " + (emailOnUpdate ? "yes":"no")).c_str());
 
-		redisCommand(c, (char*) ("hset idLookupHash " + email + " " + "userID"));//table for getting userID from email
+		redisCommand(c, ("hset idLookupHash " + email + " " + "userID").c_str());//table for getting userID from email
 
 		return userID;
 	}
@@ -77,9 +80,9 @@ namespace DAL{
 		std::string incomeID = createIncomeID(userID);
 		std::string hashName = "user:" + userID + ":income:" + incomeID;
 
-		redisCommand(c,  (char*)("hset " + hashName + " source "  + sourceName));
-		redisCommand(c,  (char*)("hset " + hashName + " amount "  + amount));
-		redisCommand(c,  (char*)("hset " + hashName + " savings " + savings));
+		redisCommand(c, ("hset " + hashName + " source "  + sourceName).c_str());
+		redisCommand(c, ("hset " + hashName + " amount "  + amount).c_str());
+		redisCommand(c, ("hset " + hashName + " savings " + savings).c_str());
 
 		return incomeID;
 	}
@@ -92,21 +95,23 @@ namespace DAL{
 		std::string debtID = createDebtID(userID);
 		std::string hashName = "user:" + userID + ":debt:" + debtID;
 
-		redisCommand(c, (char*) ("hset " + hashName + " account "          + accountName));
-		redisCommand(c, (char*) ("hset " + hashName + " balance "          + balance));
-		redisCommand(c, (char*) ("hset " + hashName + " apr "              + apr));
-		redisCommand(c, (char*) ("hset " + hashName + " minimumPayment "   + minimumPayment));
-		redisCommand(c, (char*) ("hset " + hashName + " extraPayment "     + extraPayment));
-		redisCommand(c, (char*) ("hset " + hashName + " dueDate "          + dueDate));
-		redisCommand(c, (char*) ("hset " + hashName + " paymentScheduled " + (paymentScheduled ? "yes":"no")));
-		redisCommand(c, (char*) ("hset " + hashName + " paymentProcessed " + (paymentProcessed ? "yes":"no")));
+		redisCommand(c, ("hset " + hashName + " account "          + accountName).c_str());
+		redisCommand(c, ("hset " + hashName + " balance "          + balance).c_str());
+		redisCommand(c, ("hset " + hashName + " apr "              + apr).c_str());
+		redisCommand(c, ("hset " + hashName + " minimumPayment "   + minimumPayment).c_str());
+		redisCommand(c, ("hset " + hashName + " extraPayment "     + extraPayment).c_str());
+		redisCommand(c, ("hset " + hashName + " dueDate "          + dueDate).c_str());
+		redisCommand(c, ("hset " + hashName + " paymentScheduled " + (paymentScheduled ? "yes":"no")).c_str());
+		redisCommand(c, ("hset " + hashName + " paymentProcessed " + (paymentProcessed ? "yes":"no")).c_str());
 
 		return debtID;
 	}
 
 	//gets a user ID from an email address
 	std::string getIDFromEmail(std::string email){
-		return redisCommand(c, (char*) ("hget idLookupHash " + email))->str;
+		return redisCommand(c, ("hget idLookupHash " + email).c_str())->str;
 	}
+
+	//TODO Create the delete user, delete income, and delete debt code
 
 }
