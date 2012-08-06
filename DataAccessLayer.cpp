@@ -29,13 +29,15 @@ namespace DAL{
 		redisReply *reply;
 
 		reply = redisCommand(c, ("lpop "+ unregisteredList).c_str()); //check unregistered ID's
+		std::stringstream out;
 
 		if(reply->type == REDIS_REPLY_NIL){ //if there are no id's from the unregistered list
 			reply = redisCommand(c, ("incr "+ incrementingID).c_str()); //create a new ID from the id counter
+			out << reply -> integer;
+		}else{
+			out << reply -> str;
 		}
 
-		std::stringstream out;
-		out << reply -> integer;
 		freeReplyObject(reply);
 
 		return out.str();
@@ -115,5 +117,7 @@ namespace DAL{
 	}
 
 	//TODO Create the delete user, delete income, and delete debt code
+
+
 
 }
