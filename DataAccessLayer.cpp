@@ -7,6 +7,7 @@
 
 #include <stdio.h>
 #include <sstream>
+#include <iostream>
 #include <hiredis/hiredis.h>
 #include "DataAccessLayer.h"
 
@@ -33,10 +34,11 @@ namespace DAL{
 			reply = redisCommand(c, ("incr "+ incrementingID).c_str()); //create a new ID from the id counter
 		}
 
-		std::string output = reply -> str;
+		std::stringstream out;
+		out << reply -> integer;
 		freeReplyObject(reply);
 
-		return output;
+		return out.str();
 	}
 
 	/*Creates a unique ID for a given user account
@@ -47,12 +49,12 @@ namespace DAL{
 
 	/*creates a unique ID for a given source of income for a given user*/
 	std::string createIncomeID(std::string userID){
-		return createID(userID+":unregisteredIncomeIDs",userID+":lastIncomeID");
+		return createID(userID+":unregisteredIncomeIDs","user:"+userID+":lastIncomeID");
 	}
 
 	/*creates a unique ID for a given source of debt for a given user*/
 	std::string createDebtID(std::string userID){
-		return createID(userID+":unregisteredDebtIDs",userID+":lastDebtID");
+		return createID(userID+":unregisteredDebtIDs","user:"+userID+":lastDebtID");
 	}
 
 	/* Adds a user to redis*/
@@ -69,7 +71,7 @@ namespace DAL{
 		redisCommand(c, ("hset " + hashName + " monthlyEmail "  + ( monthlyEmail ? "yes":"no")).c_str());
 		redisCommand(c, ("hset " + hashName + " emailOnUpdate " + (emailOnUpdate ? "yes":"no")).c_str());
 
-		redisCommand(c, ("hset idLookupHash " + email + " " + "userID").c_str());//table for getting userID from email
+		redisCommand(c, ("hset idLookupHash " + email + " " + userID).c_str());//table for getting userID from email
 
 		return userID;
 	}
