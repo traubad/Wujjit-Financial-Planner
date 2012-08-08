@@ -51,12 +51,12 @@ namespace DAL{
 
 	/*Creates a unique ID for a given source of income for a given user*/
 	std::string createIncomeID(std::string userID){
-		return createID(userID+":unregisteredIncomeIDs","user:"+userID+":lastIncomeID");
+		return createID("user:"+userID+":unregisteredIncomeIDs","user:"+userID+":lastIncomeID");
 	}
 
 	/*Creates a unique ID for a given source of debt for a given user*/
 	std::string createDebtID(std::string userID){
-		return createID(userID+":unregisteredDebtIDs","user:"+userID+":lastDebtID");
+		return createID("user:"+userID+":unregisteredDebtIDs","user:"+userID+":lastDebtID");
 	}
 
 	/*Adds a user to redis*/
