@@ -92,6 +92,28 @@ namespace DAL{
 	}
 
 	/*add a source of debt for a given user*/
+
+    /* Suggest using an array with enumerated types here to make your life easier, especially since it's a known
+     * quantity of strings:
+     *
+     * namespace Debt_Values {
+     *     enum DebtValues {
+     *         account, balance, apr, minimum_payment, extra_payment, due_date, payment_scheduled, payment_processed
+     *     };
+     *     const int NUM_DEBT_VALUES = 8;
+     * } 
+     *
+     * std::string addDebt(std::string[] debtValues) { 
+     *  //...
+     *  for (int i = 0; i < NUM_DEBT_VALUES; i++)
+     *  {
+     *      redisCommand(c, ("hset" + hashName + " account " + debtValues[i]).c_str());
+     *  }
+     *
+     *
+     *
+     *
+     */
 	std::string addDebt(std::string userID, std::string accountName, std::string balance, std::string apr,
 					std::string minimumPayment, std::string extraPayment, std::string dueDate,
 					bool paymentScheduled, bool paymentProcessed){
