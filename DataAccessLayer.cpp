@@ -118,13 +118,16 @@ namespace DAL{
 
 	//TODO Create the delete user, delete income, and delete debt code
 
+	/* Deletes a user from redis including:
+	 * his account information
+	 * his debt information
+	 * his income information*/
 	void deleteUser(std::string userID){
 		redisReply *reply;
 		std::string item;
-		std::string command = "KEYS user:"+userID+":*";
 		std::string email = redisCommand(c,("HGET user:"+userID+":account email").c_str())->str;
 
-		reply = redisCommand(c, command.c_str());
+		reply = redisCommand(c, ("KEYS user:"+userID+":*").c_str());
 		bool userExists = reply->elements > 0;
 
 		if(userExists){
@@ -135,11 +138,24 @@ namespace DAL{
 			}
 
 			//add ID to unregistered
-			redisCommand(c, ("lpush unregisteredUserIDs "+userID).c_str());
+			redisCommand(c, ("LPUSH unregisteredUserIDs "+userID).c_str());
 
 			//remove email from lookup table
 			redisCommand(c, ("HDEL idLookupHash "+email).c_str());
-
 		}
+	}
+
+	/* Deletes a given income source for a user and adds the incomeID
+	 * to that user's unregistered income id list.*/
+	void deleteIncome(std::string userID, std::string incomeID){
+		redisCommand(c, ("DEL user:"+userID+":income:"+incomeID).c_str());
+		redisCommand(c, ("LPUSH user:"+userID+":unregisteredIncomeIDs "+incomeID).c_str());
+	}
+
+	/* deletes a given debt source for a user and adds the debtID
+	 * to that user's unregistered debt id list.*/
+	void deleteDebt(std::string userID, std::string debtID){
+		redisCommand(c, ("DEL user:"+userID+":debt:"+debtID).c_str());
+		redisCommand(c, ("LPUSH user:"+userID+":unregisteredDebtIDs "+debtID).c_str());
 	}
 }

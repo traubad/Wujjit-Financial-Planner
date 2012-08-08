@@ -25,6 +25,8 @@ namespace DAL{
 	std::string getIDFromEmail(std::string email);
 
 	void deleteUser(std::string userID);
+	void deleteIncome(std::string userID, std::string incomeID);
+	void deleteDebt(std::string userID, std::string debtID);
 
 }
 #endif
