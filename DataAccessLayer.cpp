@@ -11,6 +11,7 @@
 #include <hiredis/hiredis.h>
 #include "DataAccessLayer.h"
 
+using namespace DAL::redisKeys;
 
 namespace DAL{
 
@@ -46,17 +47,17 @@ namespace DAL{
 	/*Creates a unique ID for a given user account
 	 *returns the newly created user's id*/
 	std::string createUserID(){
-		return createID("unregisteredUserIDs","lastUserID");
+		return createID(unregisteredUserIDs(),lastUserID());
 	}
 
 	/*Creates a unique ID for a given source of income for a given user*/
 	std::string createIncomeID(std::string userID){
-		return createID("user:"+userID+":unregisteredIncomeIDs","user:"+userID+":lastIncomeID");
+		return createID(unregisteredIncomeIDs(userID),lastIncomeID(userID));
 	}
 
 	/*Creates a unique ID for a given source of debt for a given user*/
 	std::string createDebtID(std::string userID){
-		return createID("user:"+userID+":unregisteredDebtIDs","user:"+userID+":lastDebtID");
+		return createID(unregisteredDebtIDs(userID),lastDebtID(userID));
 	}
 
 	/*Adds a user to redis*/
@@ -65,7 +66,7 @@ namespace DAL{
 		//TODO check if email is already registered in idLookupHash!
 
 		std::string userID = createUserID();//userID for this user.
-		std::string hashName = "user:"+userID+":account"; //name of hash that will store this user's account information
+		std::string hashName = accountInfo(userID); //name of hash that will store this user's account information
 
 		redisCommand(c, ("hset " + hashName + " name "          + name).c_str());
 		redisCommand(c, ("hset " + hashName + " email "         + email).c_str());
@@ -82,7 +83,7 @@ namespace DAL{
 	std::string addIncome(std::string userID, std::string sourceName, std::string amount, std::string savings){
 
 		std::string incomeID = createIncomeID(userID);
-		std::string hashName = "user:" + userID + ":income:" + incomeID;
+		std::string hashName = incomeInfo(userID, incomeID);
 
 		redisCommand(c, ("hset " + hashName + " source "  + sourceName).c_str());
 		redisCommand(c, ("hset " + hashName + " amount "  + amount).c_str());
@@ -97,7 +98,7 @@ namespace DAL{
 					bool paymentScheduled, bool paymentProcessed){
 
 		std::string debtID = createDebtID(userID);
-		std::string hashName = "user:" + userID + ":debt:" + debtID;
+		std::string hashName = debtInfo(userID, debtID);
 
 		redisCommand(c, ("hset " + hashName + " account "          + accountName).c_str());
 		redisCommand(c, ("hset " + hashName + " balance "          + balance).c_str());
@@ -113,8 +114,45 @@ namespace DAL{
 
 	//gets a user ID from an email address
 	std::string getIDFromEmail(std::string email){
-		return redisCommand(c, ("hget idLookupHash " + email).c_str())->str;
+		return redisCommand(c, ("hget "+ idLookupHash() + " " + email).c_str())->str;
 	}
+
+
+
+
+
+
+
+	    /* Suggest using an array with enumerated types here to make your life easier, especially since it's a known
+	     * quantity of strings:
+	     *
+	     * namespace Debt_Values {
+	     *     enum DebtValues {
+	     *         account, balance, apr, minimum_payment, extra_payment, due_date, payment_scheduled, payment_processed
+	     *     };
+	     *     const int NUM_DEBT_VALUES = 8;
+	     * }
+	     *
+	     * std::string addDebt(std::string[] debtValues) {
+	     *  //...
+	     *  for (int i = 0; i < NUM_DEBT_VALUES; i++)
+	     *  {
+	     *      redisCommand(c, ("hset" + hashName + " account " + debtValues[i]).c_str());
+	     *  }
+	     *
+	     *
+	     *
+	     *
+	     */
+
+
+
+
+
+
+
+
+
 
 	//TODO Create the delete user, delete income, and delete debt code
 
@@ -125,7 +163,7 @@ namespace DAL{
 	void deleteUser(std::string userID){
 		redisReply *reply;
 		std::string item;
-		std::string email = redisCommand(c,("HGET user:"+userID+":account email").c_str())->str;
+		std::string email = redisCommand(c,("HGET " + accountInfo(userID) + " email").c_str())->str;
 
 		reply = redisCommand(c, ("KEYS user:"+userID+":*").c_str());
 		bool userExists = reply->elements > 0;
@@ -138,24 +176,24 @@ namespace DAL{
 			}
 
 			//add ID to unregistered
-			redisCommand(c, ("LPUSH unregisteredUserIDs "+userID).c_str());
+			redisCommand(c, ("LPUSH " + unregisteredUserIDs() + " "+userID).c_str());
 
 			//remove email from lookup table
-			redisCommand(c, ("HDEL idLookupHash "+email).c_str());
+			redisCommand(c, ("HDEL " + idLookupHash() + " "+email).c_str());
 		}
 	}
 
 	/* Deletes a given income source for a user and adds the incomeID
 	 * to that user's unregistered income id list.*/
 	void deleteIncome(std::string userID, std::string incomeID){
-		redisCommand(c, ("DEL user:"+userID+":income:"+incomeID).c_str());
-		redisCommand(c, ("LPUSH user:"+userID+":unregisteredIncomeIDs "+incomeID).c_str());
+		redisCommand(c, ("DEL " + incomeInfo(userID, incomeID)).c_str());
+		redisCommand(c, ("LPUSH " + unregisteredIncomeIDs(userID)).c_str());
 	}
 
 	/* deletes a given debt source for a user and adds the debtID
 	 * to that user's unregistered debt id list.*/
 	void deleteDebt(std::string userID, std::string debtID){
-		redisCommand(c, ("DEL user:"+userID+":debt:"+debtID).c_str());
-		redisCommand(c, ("LPUSH user:"+userID+":unregisteredDebtIDs "+debtID).c_str());
+		redisCommand(c, ("DEL " + debtInfo(userID, debtID)).c_str());
+		redisCommand(c, ("LPUSH " + unregisteredDebtIDs(userID)).c_str());
 	}
 }

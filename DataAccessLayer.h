@@ -28,5 +28,22 @@ namespace DAL{
 	void deleteIncome(std::string userID, std::string incomeID);
 	void deleteDebt(std::string userID, std::string debtID);
 
+	namespace redisKeys{
+		inline std::string idLookupHash(){ return "idLookupHash"; }
+
+		inline std::string lastUserID(){ return "lastUserID"; }
+		inline std::string lastDebtID(std::string userID){ return "user:"+userID+":lastDebtID"; }
+		inline std::string lastIncomeID(std::string userID){ return "user:"+userID+":lastIncomeID"; }
+
+		inline std::string unregisteredUserIDs() { return "unregisteredUserIDs"; }
+		inline std::string unregisteredDebtIDs(std::string userID)   { return "user:"+userID+":unregisteredDebtIDs"; }
+		inline std::string unregisteredIncomeIDs(std::string userID) { return "user:"+userID+":unregisteredIncomeIDs"; }
+
+		inline std::string accountInfo(std::string userID) { return "user:"+userID+":account"; }
+		inline std::string debtInfo(std::string userID, std::string debtID) { return "user:" + userID + ":debt:" + debtID; }
+		inline std::string incomeInfo(std::string userID, std::string incomeID) { return "user:" + userID + ":income:" + incomeID; }
+
+	}
+
 }
 #endif
