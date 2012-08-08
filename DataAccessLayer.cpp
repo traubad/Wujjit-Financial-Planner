@@ -28,13 +28,13 @@ namespace DAL{
 	std::string createID(std::string unregisteredList, std::string incrementingID){
 		redisReply *reply;
 
-		reply = redisCommand(c, ("lpop "+ unregisteredList).c_str()); //check unregistered ID's
+		reply = redisCommand(c, ("lpop "+ unregisteredList).c_str()); //attempt to get an unregistered ID
 		std::stringstream out;
 
-		if(reply->type == REDIS_REPLY_NIL){ //if there are no id's from the unregistered list
+		if(reply->type == REDIS_REPLY_NIL){ //if the returned ID was NIL (IE the list was emtpy)
 			reply = redisCommand(c, ("incr "+ incrementingID).c_str()); //create a new ID from the id counter
 			out << reply -> integer;
-		}else{
+		}else{//if the list did return an ID
 			out << reply -> str;
 		}
 
@@ -44,22 +44,22 @@ namespace DAL{
 	}
 
 	/*Creates a unique ID for a given user account
-	 * returns the newly created user's id*/
+	 *returns the newly created user's id*/
 	std::string createUserID(){
 		return createID("unregisteredUserIDs","lastUserID");
 	}
 
-	/*creates a unique ID for a given source of income for a given user*/
+	/*Creates a unique ID for a given source of income for a given user*/
 	std::string createIncomeID(std::string userID){
 		return createID(userID+":unregisteredIncomeIDs","user:"+userID+":lastIncomeID");
 	}
 
-	/*creates a unique ID for a given source of debt for a given user*/
+	/*Creates a unique ID for a given source of debt for a given user*/
 	std::string createDebtID(std::string userID){
 		return createID(userID+":unregisteredDebtIDs","user:"+userID+":lastDebtID");
 	}
 
-	/* Adds a user to redis*/
+	/*Adds a user to redis*/
 	std::string createUser(std::string email, std::string name, std::string phone, bool monthlyEmail, bool emailOnUpdate){
 
 		//TODO check if email is already registered in idLookupHash!
@@ -118,6 +118,28 @@ namespace DAL{
 
 	//TODO Create the delete user, delete income, and delete debt code
 
+	void deleteUser(std::string userID){
+		redisReply *reply;
+		std::string item;
+		std::string command = "KEYS user:"+userID+":*";
+		std::string email = redisCommand(c,("HGET user:"+userID+":account email").c_str())->str;
 
+		reply = redisCommand(c, command.c_str());
+		bool userExists = reply->elements > 0;
 
+		if(userExists){
+			//delete all user info
+			for(int i=0; i < reply->elements; i++){
+				item = reply->element[i] ->str;
+				redisCommand(c, ("DEL "+item).c_str());
+			}
+
+			//add ID to unregistered
+			redisCommand(c, ("lpush unregisteredUserIDs "+userID).c_str());
+
+			//remove email from lookup table
+			redisCommand(c, ("HDEL idLookupHash "+email).c_str());
+
+		}
+	}
 }

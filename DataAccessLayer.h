@@ -24,5 +24,7 @@ namespace DAL{
 
 	std::string getIDFromEmail(std::string email);
 
+	void deleteUser(std::string userID);
+
 }
 #endif
