@@ -8,41 +8,64 @@
 #ifndef DATAACCESSLAYER_H_
 #define DATAACCESSLAYER_H_
 
-
+#include <vector>
+#include <map>
 namespace DAL{
 
-	std::string createID(std::string unregisteredList, std::string incrementingID);
-	std::string createUserID();
-	std::string createIncomeID(std::string userID);
-	std::string createDebtID(std::string userID);
-	std::string createUser(std::string email, std::string name, std::string phone="", bool monthlyEmail=true, bool emailOnUpdate=true);
-	std::string addIncome(std::string userID, std::string sourceName, std::string amount, std::string savings);
 
-	std::string addDebt(std::string userID, std::string accountName, std::string balance, std::string apr,
-					std::string minimumPayment, std::string extraPayment, std::string dueDate = "1",
-					bool paymentScheduled = false, bool paymentProcessed = false);
+	namespace Account_Values {
+		enum AccountValues{
+			name, email, phone, monthlyEmail, emailOnUpdate
+		};
+	}
+
+	namespace Debt_Values {
+		enum DebtValues {
+			debt_source, balance, apr, minimum_payment, extra_payment, due_date, payment_scheduled, payment_processed
+		};
+	}
+
+	namespace Income_Values {
+		enum IncomeValues {
+			income_source, amount, savings
+		};
+	}
+
+	void initialize();
+
+	std::string createID(std::string unregisteredList, std::string incrementingID);
+
+	std::string createAccountID();
+	std::string createDebtID(std::string accountID);
+	std::string createIncomeID(std::string accountID);
+
+	std::string createAccount(std::map<Account_Values::AccountValues, std::string> &vals);
+	std::string addDebt(std::string accountID, std::map<Debt_Values::DebtValues, std::string> &vals);
+	std::string addIncome(std::string accountID, std::map<Income_Values::IncomeValues, std::string> &vals);
 
 	std::string getIDFromEmail(std::string email);
+	//void update(std::string accountID, DAL::Field_Categories::categories category, std::string field, std::string value, std::string subID="");
 
-	void deleteUser(std::string userID);
-	void deleteIncome(std::string userID, std::string incomeID);
-	void deleteDebt(std::string userID, std::string debtID);
 
-	namespace redisKeys{
+	void deleteUser(std::string accountID);
+	void deleteIncome(std::string accountID, std::string incomeID);
+	void deleteDebt(std::string accountID, std::string debtID);
+
+	namespace Redis_Keys{
+
 		inline std::string idLookupHash(){ return "idLookupHash"; }
 
 		inline std::string lastUserID(){ return "lastUserID"; }
-		inline std::string lastDebtID(std::string userID){ return "user:"+userID+":lastDebtID"; }
-		inline std::string lastIncomeID(std::string userID){ return "user:"+userID+":lastIncomeID"; }
+		inline std::string lastDebtID(std::string accountID){ return "account:"+accountID+":lastDebtID"; }
+		inline std::string lastIncomeID(std::string accountID){ return "account:"+accountID+":lastIncomeID"; }
 
 		inline std::string unregisteredUserIDs() { return "unregisteredUserIDs"; }
-		inline std::string unregisteredDebtIDs(std::string userID)   { return "user:"+userID+":unregisteredDebtIDs"; }
-		inline std::string unregisteredIncomeIDs(std::string userID) { return "user:"+userID+":unregisteredIncomeIDs"; }
+		inline std::string unregisteredDebtIDs(std::string accountID)   { return "account:"+accountID+":unregisteredDebtIDs"; }
+		inline std::string unregisteredIncomeIDs(std::string accountID) { return "account:"+accountID+":unregisteredIncomeIDs"; }
 
-		inline std::string accountInfo(std::string userID) { return "user:"+userID+":account"; }
-		inline std::string debtInfo(std::string userID, std::string debtID) { return "user:" + userID + ":debt:" + debtID; }
-		inline std::string incomeInfo(std::string userID, std::string incomeID) { return "user:" + userID + ":income:" + incomeID; }
-
+		inline std::string accountInfo(std::string accountID) { return "account:"+accountID+":account"; }
+		inline std::string debtInfo(std::string accountID, std::string debtID) { return "account:" + accountID + ":debt:" + debtID; }
+		inline std::string incomeInfo(std::string accountID, std::string incomeID) { return "account:" + accountID + ":income:" + incomeID; }
 	}
 
 }

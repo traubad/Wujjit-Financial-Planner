@@ -8,14 +8,55 @@
 #include <stdio.h>
 #include <sstream>
 #include <iostream>
+#include <string>
+#include <vector>
+#include <map>
 #include <hiredis/hiredis.h>
 #include "DataAccessLayer.h"
+#include "utils/TurnLeftLib/enumparser.h"
 
-using namespace DAL::redisKeys;
+using namespace DAL::Redis_Keys;
+
+using namespace DAL::Account_Values;
+using namespace DAL::Debt_Values;
+using namespace DAL::Income_Values;
+
+
 
 namespace DAL{
 
 	redisContext *c = redisConnect("localhost",6379); //TODO Is this ok?  This means that the connection is always open...
+	bool notInitialized = true;
+
+	std::map<AccountValues, std::string> accountKeys;
+	std::map<DebtValues, std::string> debtKeys;
+	std::map<IncomeValues, std::string> incomeKeys;
+
+	void initialize(){
+		if(notInitialized){
+			accountKeys[name] = "name";
+			accountKeys[email] = "email";
+			accountKeys[phone] = "phone";
+			accountKeys[monthlyEmail] = "monthlyEmail";
+			accountKeys[emailOnUpdate] = "emailOnUpdate";
+
+			debtKeys[debt_source] = "debt_source";
+			debtKeys[balance] = "balance";
+			debtKeys[apr] = "apr";
+			debtKeys[minimum_payment] = "minimum_payment";
+			debtKeys[extra_payment] = "extra_payment";
+			debtKeys[due_date] = "due_date";
+			debtKeys[payment_scheduled] = "payment_scheduled";
+			debtKeys[payment_processed] = "payment_processed";
+
+			incomeKeys[income_source] = "source";
+			incomeKeys[amount] = "amount";
+			incomeKeys[savings] = "savings";
+
+			notInitialized = false;
+		}
+	}
+
 
 	/**TODO Create a clean way to check the output of redisCommands
 	 * for failure and implement error handling on all redisCommand calls*/
@@ -35,7 +76,7 @@ namespace DAL{
 		if(reply->type == REDIS_REPLY_NIL){ //if the returned ID was NIL (IE the list was emtpy)
 			reply = redisCommand(c, ("incr "+ incrementingID).c_str()); //create a new ID from the id counter
 			out << reply -> integer;
-		}else{//if the list did return an ID
+		} else {//if the list did return an ID
 			out << reply -> str;
 		}
 
@@ -46,69 +87,52 @@ namespace DAL{
 
 	/*Creates a unique ID for a given user account
 	 *returns the newly created user's id*/
-	std::string createUserID(){
+	std::string createAccountID(){
 		return createID(unregisteredUserIDs(),lastUserID());
 	}
 
 	/*Creates a unique ID for a given source of income for a given user*/
-	std::string createIncomeID(std::string userID){
-		return createID(unregisteredIncomeIDs(userID),lastIncomeID(userID));
+	std::string createIncomeID(std::string accountID){
+		return createID(unregisteredIncomeIDs(accountID),lastIncomeID(accountID));
 	}
 
 	/*Creates a unique ID for a given source of debt for a given user*/
-	std::string createDebtID(std::string userID){
-		return createID(unregisteredDebtIDs(userID),lastDebtID(userID));
+	std::string createDebtID(std::string accountID){
+		return createID(unregisteredDebtIDs(accountID),lastDebtID(accountID));
 	}
 
-	/*Adds a user to redis*/
-	std::string createUser(std::string email, std::string name, std::string phone, bool monthlyEmail, bool emailOnUpdate){
-
+	/*Creates a new User in redis*/
+	std::string createAccount(std::map<AccountValues, std::string> &vals){
 		//TODO check if email is already registered in idLookupHash!
+		std::string accountID = createAccountID();//accountID for this user.
 
-		std::string userID = createUserID();//userID for this user.
-		std::string hashName = accountInfo(userID); //name of hash that will store this user's account information
+		for ( std::map<AccountValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		{
+		   redisCommand(c, ("hset " + accountInfo(accountID) + " " + accountKeys[it->first] + " " + vals[it->first]).c_str());
+		}
 
-		redisCommand(c, ("hset " + hashName + " name "          + name).c_str());
-		redisCommand(c, ("hset " + hashName + " email "         + email).c_str());
-		redisCommand(c, ("hset " + hashName + " phone "         + phone).c_str());
-		redisCommand(c, ("hset " + hashName + " monthlyEmail "  + ( monthlyEmail ? "yes":"no")).c_str());
-		redisCommand(c, ("hset " + hashName + " emailOnUpdate " + (emailOnUpdate ? "yes":"no")).c_str());
+		redisCommand(c, ("hset idLookupHash " + vals[email] + " " + accountID).c_str());//table for getting accountID from email
 
-		redisCommand(c, ("hset idLookupHash " + email + " " + userID).c_str());//table for getting userID from email
-
-		return userID;
+		return accountID;
 	}
 
-	/*add a source of income for a given user*/
-	std::string addIncome(std::string userID, std::string sourceName, std::string amount, std::string savings){
-
-		std::string incomeID = createIncomeID(userID);
-		std::string hashName = incomeInfo(userID, incomeID);
-
-		redisCommand(c, ("hset " + hashName + " source "  + sourceName).c_str());
-		redisCommand(c, ("hset " + hashName + " amount "  + amount).c_str());
-		redisCommand(c, ("hset " + hashName + " savings " + savings).c_str());
-
+	/*Adds a source of income to a given user in Redis*/
+	std::string addIncome(std::string accountID, std::map<IncomeValues, std::string> &vals){
+		std::string incomeID = createIncomeID(accountID);
+		for ( std::map<IncomeValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		{
+		   redisCommand(c, ("hset " + incomeInfo(accountID, incomeID) + " " + incomeKeys[it->first] + " " + vals[it->first]).c_str());
+		}
 		return incomeID;
 	}
 
-	/*add a source of debt for a given user*/
-	std::string addDebt(std::string userID, std::string accountName, std::string balance, std::string apr,
-					std::string minimumPayment, std::string extraPayment, std::string dueDate,
-					bool paymentScheduled, bool paymentProcessed){
-
-		std::string debtID = createDebtID(userID);
-		std::string hashName = debtInfo(userID, debtID);
-
-		redisCommand(c, ("hset " + hashName + " account "          + accountName).c_str());
-		redisCommand(c, ("hset " + hashName + " balance "          + balance).c_str());
-		redisCommand(c, ("hset " + hashName + " apr "              + apr).c_str());
-		redisCommand(c, ("hset " + hashName + " minimumPayment "   + minimumPayment).c_str());
-		redisCommand(c, ("hset " + hashName + " extraPayment "     + extraPayment).c_str());
-		redisCommand(c, ("hset " + hashName + " dueDate "          + dueDate).c_str());
-		redisCommand(c, ("hset " + hashName + " paymentScheduled " + (paymentScheduled ? "yes":"no")).c_str());
-		redisCommand(c, ("hset " + hashName + " paymentProcessed " + (paymentProcessed ? "yes":"no")).c_str());
-
+	/*Adds a source of debt to a given user in Redis*/
+	std::string addDebt(std::string accountID, std::map<DebtValues, std::string> &vals){
+		std::string debtID = createDebtID(accountID);
+		for ( std::map<DebtValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		{
+		   redisCommand(c, ("hset " + debtInfo(accountID, debtID) + " " + debtKeys[it->first] + " " + vals[it->first]).c_str());
+		}
 		return debtID;
 	}
 
@@ -118,54 +142,18 @@ namespace DAL{
 	}
 
 
-
-
-
-
-
-	    /* Suggest using an array with enumerated types here to make your life easier, especially since it's a known
-	     * quantity of strings:
-	     *
-	     * namespace Debt_Values {
-	     *     enum DebtValues {
-	     *         account, balance, apr, minimum_payment, extra_payment, due_date, payment_scheduled, payment_processed
-	     *     };
-	     *     const int NUM_DEBT_VALUES = 8;
-	     * }
-	     *
-	     * std::string addDebt(std::string[] debtValues) {
-	     *  //...
-	     *  for (int i = 0; i < NUM_DEBT_VALUES; i++)
-	     *  {
-	     *      redisCommand(c, ("hset" + hashName + " account " + debtValues[i]).c_str());
-	     *  }
-	     *
-	     *
-	     *
-	     *
-	     */
-
-
-
-
-
-
-
-
-
-
 	//TODO Create the delete user, delete income, and delete debt code
 
 	/* Deletes a user from redis including:
 	 * his account information
 	 * his debt information
 	 * his income information*/
-	void deleteUser(std::string userID){
+	void deleteAccount(std::string accountID){
 		redisReply *reply;
 		std::string item;
-		std::string email = redisCommand(c,("HGET " + accountInfo(userID) + " email").c_str())->str;
+		std::string email = redisCommand(c,("HGET " + accountInfo(accountID) + " email").c_str())->str;
 
-		reply = redisCommand(c, ("KEYS user:"+userID+":*").c_str());
+		reply = redisCommand(c, ("KEYS account:"+accountID+":*").c_str());
 		bool userExists = reply->elements > 0;
 
 		if(userExists){
@@ -176,7 +164,7 @@ namespace DAL{
 			}
 
 			//add ID to unregistered
-			redisCommand(c, ("LPUSH " + unregisteredUserIDs() + " "+userID).c_str());
+			redisCommand(c, ("LPUSH " + unregisteredUserIDs() + " "+accountID).c_str());
 
 			//remove email from lookup table
 			redisCommand(c, ("HDEL " + idLookupHash() + " "+email).c_str());
@@ -185,15 +173,28 @@ namespace DAL{
 
 	/* Deletes a given income source for a user and adds the incomeID
 	 * to that user's unregistered income id list.*/
-	void deleteIncome(std::string userID, std::string incomeID){
-		redisCommand(c, ("DEL " + incomeInfo(userID, incomeID)).c_str());
-		redisCommand(c, ("LPUSH " + unregisteredIncomeIDs(userID)).c_str());
+	void deleteIncome(std::string accountID, std::string incomeID){
+		redisCommand(c, ("DEL " + incomeInfo(accountID, incomeID)).c_str());
+		redisCommand(c, ("LPUSH " + unregisteredIncomeIDs(accountID)).c_str());
 	}
 
 	/* deletes a given debt source for a user and adds the debtID
 	 * to that user's unregistered debt id list.*/
-	void deleteDebt(std::string userID, std::string debtID){
-		redisCommand(c, ("DEL " + debtInfo(userID, debtID)).c_str());
-		redisCommand(c, ("LPUSH " + unregisteredDebtIDs(userID)).c_str());
+	void deleteDebt(std::string accountID, std::string debtID){
+		redisCommand(c, ("DEL " + debtInfo(accountID, debtID)).c_str());
+		redisCommand(c, ("LPUSH " + unregisteredDebtIDs(accountID)).c_str());
 	}
+/**
+	void update(std::string accountID, categories category, std::string field, std::string value, std::string subID){
+		std::string prefix;
+		const char* category_str[] = {"account","debt","income"}; //TODO can this be placed in the header file without creating errors?
+
+		if(subID.length()){ //if empty
+			prefix = "user:"+accountID+":"+category_str[category];
+		} else {
+			prefix = "user:"+accountID+":"+category_str[category]+":"+subID;
+		}
+		redisCommand(c, ("HSET "+prefix+" "+field+" "+value).c_str());
+	}
+**/
 }
