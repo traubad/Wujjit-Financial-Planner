@@ -175,14 +175,14 @@ namespace DAL{
 	 * to that user's unregistered income id list.*/
 	void deleteIncome(std::string accountID, std::string incomeID){
 		redisCommand(c, ("DEL " + incomeInfo(accountID, incomeID)).c_str());
-		redisCommand(c, ("LPUSH " + unregisteredIncomeIDs(accountID)).c_str());
+		redisCommand(c, ("LPUSH " + unregisteredIncomeIDs(accountID) +" " + incomeID).c_str());
 	}
 
 	/* deletes a given debt source for a user and adds the debtID
 	 * to that user's unregistered debt id list.*/
 	void deleteDebt(std::string accountID, std::string debtID){
 		redisCommand(c, ("DEL " + debtInfo(accountID, debtID)).c_str());
-		redisCommand(c, ("LPUSH " + unregisteredDebtIDs(accountID)).c_str());
+		redisCommand(c, ("LPUSH " + unregisteredDebtIDs(accountID) +" " + debtID).c_str());
 	}
 /**
 	void update(std::string accountID, categories category, std::string field, std::string value, std::string subID){
