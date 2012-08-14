@@ -12,7 +12,6 @@
 #include <map>
 namespace DAL{
 
-
 	namespace Account_Values {
 		enum AccountValues{
 			name, email, phone, monthlyEmail, emailOnUpdate
@@ -63,7 +62,7 @@ namespace DAL{
 		inline std::string unregisteredDebtIDs(std::string accountID)   { return "account:"+accountID+":unregisteredDebtIDs"; }
 		inline std::string unregisteredIncomeIDs(std::string accountID) { return "account:"+accountID+":unregisteredIncomeIDs"; }
 
-		inline std::string accountInfo(std::string accountID) { return "account:"+accountID+":account"; }
+		inline std::string accountInfo(std::string accountID) { return "account:"+accountID+":info"; }
 		inline std::string debtInfo(std::string accountID, std::string debtID) { return "account:" + accountID + ":debt:" + debtID; }
 		inline std::string incomeInfo(std::string accountID, std::string incomeID) { return "account:" + accountID + ":income:" + incomeID; }
 	}
