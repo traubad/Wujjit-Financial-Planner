@@ -47,7 +47,7 @@ namespace DAL{
 	//void update(std::string accountID, DAL::Field_Categories::categories category, std::string field, std::string value, std::string subID="");
 
 
-	void deleteUser(std::string accountID);
+	void deleteAccount(std::string accountID);
 	void deleteIncome(std::string accountID, std::string incomeID);
 	void deleteDebt(std::string accountID, std::string debtID);
 
@@ -55,11 +55,11 @@ namespace DAL{
 
 		inline std::string idLookupHash(){ return "idLookupHash"; }
 
-		inline std::string lastUserID(){ return "lastUserID"; }
+		inline std::string lastUserID(){ return "lastAccountID"; }
 		inline std::string lastDebtID(std::string accountID){ return "account:"+accountID+":lastDebtID"; }
 		inline std::string lastIncomeID(std::string accountID){ return "account:"+accountID+":lastIncomeID"; }
 
-		inline std::string unregisteredUserIDs() { return "unregisteredUserIDs"; }
+		inline std::string unregisteredUserIDs() { return "unregisteredAccountIDs"; }
 		inline std::string unregisteredDebtIDs(std::string accountID)   { return "account:"+accountID+":unregisteredDebtIDs"; }
 		inline std::string unregisteredIncomeIDs(std::string accountID) { return "account:"+accountID+":unregisteredIncomeIDs"; }
 
