@@ -189,7 +189,7 @@ namespace DAL{
 	/* deletes a given debt source for a user and adds the debtID
 	 * to that user's unregistered debt id list.*/
 	void deleteDebt(std::string accountID, std::string debtID){
-		redisCommand(c, ("DEL %s",debtInfo(accountID, debtID)).c_str());
+		redisCommand(c, "DEL %s",debtInfo(accountID, debtID).c_str());
 		redisCommand(c, "LPUSH %s %s",unregisteredDebtIDs(accountID).c_str(), debtID.c_str());
 	}
 
