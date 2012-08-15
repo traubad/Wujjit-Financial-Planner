@@ -43,12 +43,14 @@ namespace DAL{
 	std::string addIncome(std::string accountID, std::map<Income_Values::IncomeValues, std::string> &vals);
 
 	std::string getIDFromEmail(std::string email);
-	//void update(std::string accountID, DAL::Field_Categories::categories category, std::string field, std::string value, std::string subID="");
-
 
 	void deleteAccount(std::string accountID);
 	void deleteIncome(std::string accountID, std::string incomeID);
 	void deleteDebt(std::string accountID, std::string debtID);
+
+	void updateAccount(std::string accountID, Account_Values::AccountValues field, std::string value);
+	void updateDebt(std::string accountID, std::string debtID, Debt_Values::DebtValues field, std::string value);
+	void updateIncome(std::string accountID, std::string incomeID, Income_Values::IncomeValues field, std::string value);
 
 	namespace Redis_Keys{
 

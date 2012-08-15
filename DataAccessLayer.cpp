@@ -21,8 +21,6 @@ using namespace DAL::Account_Values;
 using namespace DAL::Debt_Values;
 using namespace DAL::Income_Values;
 
-
-
 namespace DAL{
 
 	redisContext *c = redisConnect("localhost",6379); //TODO Is this ok?  This means that the connection is always open...
@@ -49,7 +47,7 @@ namespace DAL{
 			debtKeys[payment_scheduled] = "payment_scheduled";
 			debtKeys[payment_processed] = "payment_processed";
 
-			incomeKeys[income_source] = "source";
+			incomeKeys[income_source] = "income_source";
 			incomeKeys[amount] = "amount";
 			incomeKeys[savings] = "savings";
 
@@ -149,17 +147,24 @@ namespace DAL{
 	 * his debt information
 	 * his income information*/
 	void deleteAccount(std::string accountID){
-		redisReply *reply;
+		redisReply *mainReply, *emailReply ;
 		std::string item;
-		std::string email = redisCommand(c,("HGET " + accountInfo(accountID) + " email").c_str())->str;
+		std::string email;
 
-		reply = redisCommand(c, ("KEYS account:"+accountID+":*").c_str());
-		bool userExists = reply->elements > 0;
+		mainReply = redisCommand(c, ("KEYS account:"+accountID+":*").c_str());
+		bool userExists = mainReply->elements > 0;
 
 		if(userExists){
+			emailReply = redisCommand(c,("HGET " + accountInfo(accountID) + " email").c_str());
+			if(emailReply->type == REDIS_REPLY_STRING) {
+				email = emailReply ->str;
+			} else {
+				//TODO: LOG AN ERROR!
+			}
+
 			//delete all user info
-			for(int i=0; i < reply->elements; i++){
-				item = reply->element[i] ->str;
+			for(unsigned int i=0; i < mainReply->elements; i++){
+				item = mainReply->element[i] ->str;
 				redisCommand(c, ("DEL "+item).c_str());
 			}
 
@@ -184,17 +189,21 @@ namespace DAL{
 		redisCommand(c, ("DEL " + debtInfo(accountID, debtID)).c_str());
 		redisCommand(c, ("LPUSH " + unregisteredDebtIDs(accountID) +" " + debtID).c_str());
 	}
-/**
-	void update(std::string accountID, categories category, std::string field, std::string value, std::string subID){
-		std::string prefix;
-		const char* category_str[] = {"account","debt","income"}; //TODO can this be placed in the header file without creating errors?
 
-		if(subID.length()){ //if empty
-			prefix = "user:"+accountID+":"+category_str[category];
-		} else {
-			prefix = "user:"+accountID+":"+category_str[category]+":"+subID;
-		}
-		redisCommand(c, ("HSET "+prefix+" "+field+" "+value).c_str());
+	void updateAccount(std::string accountID, AccountValues field, std::string value){
+		redisCommand(c, ("HSET account:"+accountID+":info "+accountKeys[field]+" \""+value+"\"").c_str());
 	}
-**/
+
+	void updateDebt(std::string accountID, std::string debtID, DebtValues field, std::string value){
+		redisCommand(c, ("HSET account:"+accountID+":debt:"+debtID+" "+debtKeys[field]+" \""+value+"\"").c_str());
+	}
+
+	void updateIncome(std::string accountID, std::string incomeID, IncomeValues field, std::string value){
+		redisReply *reply;
+		std::string command = "HSET account:%s:income:%s %s %s",accountID,incomeID,incomeKeys[field],value;
+		std::cout<<command<<std::endl;
+		reply = redisCommand(c, (command).c_str());
+		std::cout<<reply->str<<std::endl;
+	}
+
 }
