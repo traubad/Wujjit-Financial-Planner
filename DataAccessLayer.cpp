@@ -23,7 +23,7 @@ using namespace DAL::Income_Values;
 
 namespace DAL{
 
-	redisContext *c = redisConnect("localhost",6379); //TODO Is this ok?  This means that the connection is always open...
+	redisContext *c = redisConnect("localhost",6379);
 	bool notInitialized = true;
 
 	std::map<AccountValues, std::string> accountKeys;
@@ -56,11 +56,8 @@ namespace DAL{
 	}
 
 
-	/**TODO Create a clean way to check the output of redisCommands
-	 * for failure and implement error handling on all redisCommand calls*/
-
-	//TODO should I make some DRY optimizations to the hashNames to prevent typo slip-ups?
-
+	/**TODO Create a clean way to check the output of redisCommands for failure
+	 * and implement error handling on all redisCommand calls*/
 
 	/* Function used for generating a generic ID.
 	 * First checks to see if there's an unregistered ID
@@ -103,6 +100,10 @@ namespace DAL{
 	/*Creates a new User in redis*/
 	std::string createAccount(std::map<AccountValues, std::string> &vals){
 		//TODO check if email is already registered in idLookupHash!
+
+		if(redisCommand(c,"HGET idLookupHash %s",vals[email].c_str())->type != REDIS_REPLY_NIL)
+			return "-1"; //returns an invalid ID to signify an error, namely that the email already belongs to a registered user
+
 		std::string accountID = createAccountID();//accountID for this user.
 
 		for ( std::map<AccountValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
@@ -115,16 +116,6 @@ namespace DAL{
 		return accountID;
 	}
 
-	/*Adds a source of income to a given user in Redis*/
-	std::string addIncome(std::string accountID, std::map<IncomeValues, std::string> &vals){
-		std::string incomeID = createIncomeID(accountID);
-		for ( std::map<IncomeValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
-		{
-		   redisCommand(c, "HSET %s %s %s", incomeInfo(accountID, incomeID).c_str(), incomeKeys[it->first].c_str(), vals[it->first].c_str());
-		}
-		return incomeID;
-	}
-
 	/*Adds a source of debt to a given user in Redis*/
 	std::string addDebt(std::string accountID, std::map<DebtValues, std::string> &vals){
 		std::string debtID = createDebtID(accountID);
@@ -135,13 +126,20 @@ namespace DAL{
 		return debtID;
 	}
 
+	/*Adds a source of income to a given user in Redis*/
+	std::string addIncome(std::string accountID, std::map<IncomeValues, std::string> &vals){
+		std::string incomeID = createIncomeID(accountID);
+		for ( std::map<IncomeValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		{
+		   redisCommand(c, "HSET %s %s %s", incomeInfo(accountID, incomeID).c_str(), incomeKeys[it->first].c_str(), vals[it->first].c_str());
+		}
+		return incomeID;
+	}
+
 	//gets a user ID from an email address
 	std::string getIDFromEmail(std::string email){
 		return redisCommand(c, "HGET %s %s",idLookupHash().c_str(), email.c_str())->str;
 	}
-
-
-	//TODO Create the delete user, delete income, and delete debt code
 
 	/* Deletes a user from redis including:
 	 * his account information
@@ -193,16 +191,43 @@ namespace DAL{
 		redisCommand(c, "LPUSH %s %s",unregisteredDebtIDs(accountID).c_str(), debtID.c_str());
 	}
 
-	void updateAccount(std::string accountID, AccountValues field, std::string value){
-		redisCommand(c,"HSET account:%s:info %s %s",accountID.c_str(),accountKeys[field].c_str(),value.c_str());
+	bool updateAccount(std::string accountID, std::map<AccountValues, std::string> &vals){
+		bool badEmail = false;
+		for ( std::map<AccountValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		{
+			if(it->first != email) { //if the value we're looking at is NOT email
+				redisCommand(c, "HSET %s %s %s",accountInfo(accountID).c_str(), accountKeys[it->first].c_str(), vals[it->first].c_str());
+			} else { //if we're trying to update the email
+				 //if the new email isn't already in the lookup hash and the new email isn't blank
+				if((redisCommand(c,"HGET %s %s",idLookupHash().c_str() ,vals[email].c_str())->type == REDIS_REPLY_NIL) && (vals[email].compare("") != 0)){
+					//get the old email address
+					std::string oldEmail = redisCommand(c, "HGET %s email",accountInfo(accountID).c_str())->str;
+					//remove old email address from lookuphash
+					redisCommand(c,"HDEL %s %s",idLookupHash().c_str(), oldEmail.c_str());
+					//update the account's email
+					redisCommand(c, "HSET %s %s %s",accountInfo(accountID).c_str(), accountKeys[email].c_str(), vals[email].c_str());
+					//update the lookupHash's entry for the new email
+					redisCommand(c,"HSET %s %s %s",idLookupHash().c_str(), vals[email].c_str(), accountID.c_str());
+				} else {
+					badEmail = true;
+				}
+			}
+		}
+		return badEmail;
 	}
 
-	void updateDebt(std::string accountID, std::string debtID, DebtValues field, std::string value){
-		redisCommand(c,"HSET account:%s:debt:%s %s %s",accountID.c_str(),debtID.c_str(),debtKeys[field].c_str(),value.c_str());
+	void updateDebt(std::string accountID, std::string debtID, std::map<DebtValues, std::string> &vals){
+		for ( std::map<DebtValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		{
+		   redisCommand(c,"HSET %s %s %s",debtInfo(accountID, debtID).c_str(), debtKeys[it->first].c_str(), vals[it->first].c_str());
+		}
 	}
 
-	void updateIncome(std::string accountID, std::string incomeID, IncomeValues field, std::string value){
-		redisCommand(c,"HSET account:%s:income:%s %s %s",accountID.c_str(),incomeID.c_str(),incomeKeys[field].c_str(),value.c_str());
+	void updateIncome(std::string accountID, std::string incomeID, std::map<IncomeValues, std::string> &vals){
+		for ( std::map<IncomeValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		{
+		   redisCommand(c, "HSET %s %s %s", incomeInfo(accountID, incomeID).c_str(), incomeKeys[it->first].c_str(), vals[it->first].c_str());
+		}
 	}
 
 }

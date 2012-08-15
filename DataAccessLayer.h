@@ -48,9 +48,9 @@ namespace DAL{
 	void deleteIncome(std::string accountID, std::string incomeID);
 	void deleteDebt(std::string accountID, std::string debtID);
 
-	void updateAccount(std::string accountID, Account_Values::AccountValues field, std::string value);
-	void updateDebt(std::string accountID, std::string debtID, Debt_Values::DebtValues field, std::string value);
-	void updateIncome(std::string accountID, std::string incomeID, Income_Values::IncomeValues field, std::string value);
+	bool updateAccount(std::string accountID, std::map<Account_Values::AccountValues, std::string> &vals);
+	void updateDebt(std::string accountID, std::string debtID, std::map<Debt_Values::DebtValues, std::string> &vals);
+	void updateIncome(std::string accountID, std::string incomeID, std::map<Income_Values::IncomeValues, std::string> &vals);
 
 	namespace Redis_Keys{
 
