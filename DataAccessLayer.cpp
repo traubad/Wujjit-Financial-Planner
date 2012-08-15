@@ -67,15 +67,16 @@ namespace DAL{
 	 * If there isn't, it creates a new one.*/
 	std::string createID(std::string unregisteredList, std::string incrementingID){
 		redisReply *reply;
-
-		reply = redisCommand(c, ("lpop "+ unregisteredList).c_str()); //attempt to get an unregistered ID
 		std::stringstream out;
 
-		if(reply->type == REDIS_REPLY_NIL){ //if the returned ID was NIL (IE the list was emtpy)
-			reply = redisCommand(c, ("incr "+ incrementingID).c_str()); //create a new ID from the id counter
-			out << reply -> integer;
-		} else {//if the list did return an ID
+		reply = redisCommand(c, "LLEN %s", unregisteredList.c_str());
+
+		if(reply->integer > 0){//if there is an unregistered ID
+			reply = redisCommand(c, "LPOP %s", unregisteredList.c_str());
 			out << reply -> str;
+		} else {//if there are no unregistered ID's
+			reply = redisCommand(c, "INCR %s",incrementingID.c_str()); //create a new ID from the id counter
+			out << reply -> integer;
 		}
 
 		freeReplyObject(reply);
@@ -106,10 +107,10 @@ namespace DAL{
 
 		for ( std::map<AccountValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
-		   redisCommand(c, ("hset " + accountInfo(accountID) + " " + accountKeys[it->first] + " " + vals[it->first]).c_str());
+		   redisCommand(c, "HSET %s %s %s",accountInfo(accountID).c_str(), accountKeys[it->first].c_str(), vals[it->first].c_str());
 		}
 
-		redisCommand(c, ("hset idLookupHash " + vals[email] + " " + accountID).c_str());//table for getting accountID from email
+		redisCommand(c, "HSET idLookupHash %s %s",vals[email].c_str(), accountID.c_str());//table for getting accountID from email
 
 		return accountID;
 	}
@@ -119,7 +120,7 @@ namespace DAL{
 		std::string incomeID = createIncomeID(accountID);
 		for ( std::map<IncomeValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
-		   redisCommand(c, ("hset " + incomeInfo(accountID, incomeID) + " " + incomeKeys[it->first] + " " + vals[it->first]).c_str());
+		   redisCommand(c, "HSET %s %s %s", incomeInfo(accountID, incomeID).c_str(), incomeKeys[it->first].c_str(), vals[it->first].c_str());
 		}
 		return incomeID;
 	}
@@ -129,14 +130,14 @@ namespace DAL{
 		std::string debtID = createDebtID(accountID);
 		for ( std::map<DebtValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
-		   redisCommand(c, ("hset " + debtInfo(accountID, debtID) + " " + debtKeys[it->first] + " " + vals[it->first]).c_str());
+		   redisCommand(c,"HSET %s %s %s",debtInfo(accountID, debtID).c_str(), debtKeys[it->first].c_str(), vals[it->first].c_str());
 		}
 		return debtID;
 	}
 
 	//gets a user ID from an email address
 	std::string getIDFromEmail(std::string email){
-		return redisCommand(c, ("hget "+ idLookupHash() + " " + email).c_str())->str;
+		return redisCommand(c, "HGET %s %s",idLookupHash().c_str(), email.c_str())->str;
 	}
 
 
@@ -151,43 +152,45 @@ namespace DAL{
 		std::string item;
 		std::string email;
 
-		mainReply = redisCommand(c, ("KEYS account:"+accountID+":*").c_str());
+		mainReply = redisCommand(c, "KEYS account:%s:*",accountID.c_str());
 		bool userExists = mainReply->elements > 0;
 
 		if(userExists){
-			emailReply = redisCommand(c,("HGET " + accountInfo(accountID) + " email").c_str());
+			emailReply = redisCommand(c, "HGET %s email",accountInfo(accountID).c_str());
 			if(emailReply->type == REDIS_REPLY_STRING) {
 				email = emailReply ->str;
 			} else {
 				//TODO: LOG AN ERROR!
 			}
-
 			//delete all user info
 			for(unsigned int i=0; i < mainReply->elements; i++){
 				item = mainReply->element[i] ->str;
-				redisCommand(c, ("DEL "+item).c_str());
+				redisCommand(c, "DEL %s",item.c_str());
 			}
 
 			//add ID to unregistered
-			redisCommand(c, ("LPUSH " + unregisteredUserIDs() + " "+accountID).c_str());
+			redisCommand(c, "LPUSH %s %s",unregisteredUserIDs().c_str(), accountID.c_str());
 
 			//remove email from lookup table
-			redisCommand(c, ("HDEL " + idLookupHash() + " "+email).c_str());
+			redisCommand(c, "HDEL %s %S",idLookupHash().c_str(), email.c_str());
+
+			freeReplyObject(emailReply);
 		}
+		freeReplyObject(mainReply);
 	}
 
 	/* Deletes a given income source for a user and adds the incomeID
 	 * to that user's unregistered income id list.*/
 	void deleteIncome(std::string accountID, std::string incomeID){
-		redisCommand(c, ("DEL " + incomeInfo(accountID, incomeID)).c_str());
-		redisCommand(c, ("LPUSH " + unregisteredIncomeIDs(accountID) +" " + incomeID).c_str());
+		redisCommand(c, "DEL %s",incomeInfo(accountID, incomeID).c_str());
+		redisCommand(c, "LPUSH %s %s",unregisteredIncomeIDs(accountID).c_str(), incomeID.c_str());
 	}
 
 	/* deletes a given debt source for a user and adds the debtID
 	 * to that user's unregistered debt id list.*/
 	void deleteDebt(std::string accountID, std::string debtID){
-		redisCommand(c, ("DEL " + debtInfo(accountID, debtID)).c_str());
-		redisCommand(c, ("LPUSH " + unregisteredDebtIDs(accountID) +" " + debtID).c_str());
+		redisCommand(c, ("DEL %s",debtInfo(accountID, debtID)).c_str());
+		redisCommand(c, "LPUSH %s %s",unregisteredDebtIDs(accountID).c_str(), debtID.c_str());
 	}
 
 	void updateAccount(std::string accountID, AccountValues field, std::string value){
