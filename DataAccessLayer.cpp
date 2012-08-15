@@ -23,13 +23,14 @@ using namespace DAL::Income_Values;
 
 namespace DAL{
 
-	redisContext *c = redisConnect("localhost",6379);
 	bool notInitialized = true;
 
+	/*Maps that relate enumerators to redis database fields*/
 	std::map<AccountValues, std::string> accountKeys;
 	std::map<DebtValues, std::string> debtKeys;
 	std::map<IncomeValues, std::string> incomeKeys;
 
+	/*Necessary to initialize the DAL, only needs to be called once*/
 	void initialize(){
 		if(notInitialized){
 			accountKeys[name] = "name";
@@ -65,6 +66,7 @@ namespace DAL{
 	std::string createID(std::string unregisteredList, std::string incrementingID){
 		redisReply *reply;
 		std::stringstream out;
+		redisContext *c = redisConnect("localhost",6379);
 
 		reply = redisCommand(c, "LLEN %s", unregisteredList.c_str());
 
@@ -77,6 +79,7 @@ namespace DAL{
 		}
 
 		freeReplyObject(reply);
+		redisFree(c);
 
 		return out.str();
 	}
@@ -99,7 +102,7 @@ namespace DAL{
 
 	/*Creates a new User in redis*/
 	std::string createAccount(std::map<AccountValues, std::string> &vals){
-		//TODO check if email is already registered in idLookupHash!
+		redisContext *c = redisConnect("localhost",6379);
 
 		if(redisCommand(c,"HGET %s %s",idLookupHash().c_str(),vals[email].c_str())->type != REDIS_REPLY_NIL)
 			return "-1"; //returns an invalid ID to signify an error, namely that the email already belongs to a registered user
@@ -113,32 +116,41 @@ namespace DAL{
 
 		redisCommand(c, "HSET %s %s %s",idLookupHash().c_str(), vals[email].c_str(), accountID.c_str());//table for getting accountID from email
 
+		redisFree(c);
+
 		return accountID;
 	}
 
 	/*Adds a source of debt to a given user in Redis*/
 	std::string addDebt(std::string accountID, std::map<DebtValues, std::string> &vals){
 		std::string debtID = createDebtID(accountID);
+		redisContext *c = redisConnect("localhost",6379);
 		for ( std::map<DebtValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 		   redisCommand(c,"HSET %s %s %s",debtInfo(accountID, debtID).c_str(), debtKeys[it->first].c_str(), vals[it->first].c_str());
 		}
+		redisFree(c);
 		return debtID;
 	}
 
 	/*Adds a source of income to a given user in Redis*/
 	std::string addIncome(std::string accountID, std::map<IncomeValues, std::string> &vals){
 		std::string incomeID = createIncomeID(accountID);
+		redisContext *c = redisConnect("localhost",6379);
 		for ( std::map<IncomeValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 		   redisCommand(c, "HSET %s %s %s", incomeInfo(accountID, incomeID).c_str(), incomeKeys[it->first].c_str(), vals[it->first].c_str());
 		}
+		redisFree(c);
 		return incomeID;
 	}
 
 	//gets a user ID from an email address
 	std::string getIDFromEmail(std::string email){
-		return redisCommand(c, "HGET %s %s",idLookupHash().c_str(), email.c_str())->str;
+		redisContext *c = redisConnect("localhost",6379);
+		std::string id = redisCommand(c, "HGET %s %s",idLookupHash().c_str(), email.c_str())->str;
+		redisFree(c);
+		return id;
 	}
 
 	/* Deletes a user from redis including:
@@ -149,6 +161,7 @@ namespace DAL{
 		redisReply *mainReply, *emailReply ;
 		std::string item;
 		std::string email;
+		redisContext *c = redisConnect("localhost",6379);
 
 		mainReply = redisCommand(c, "KEYS account:%s:*",accountID.c_str());
 		bool userExists = mainReply->elements > 0;
@@ -175,20 +188,25 @@ namespace DAL{
 			freeReplyObject(emailReply);
 		}
 		freeReplyObject(mainReply);
+		redisFree(c);
 	}
 
 	/* Deletes a given income source for a user and adds the incomeID
 	 * to that user's unregistered income id list.*/
 	void deleteIncome(std::string accountID, std::string incomeID){
+		redisContext *c = redisConnect("localhost",6379);
 		redisCommand(c, "DEL %s",incomeInfo(accountID, incomeID).c_str());
 		redisCommand(c, "LPUSH %s %s",unregisteredIncomeIDs(accountID).c_str(), incomeID.c_str());
+		redisFree(c);
 	}
 
 	/* deletes a given debt source for a user and adds the debtID
 	 * to that user's unregistered debt id list.*/
 	void deleteDebt(std::string accountID, std::string debtID){
+		redisContext *c = redisConnect("localhost",6379);
 		redisCommand(c, "DEL %s",debtInfo(accountID, debtID).c_str());
 		redisCommand(c, "LPUSH %s %s",unregisteredDebtIDs(accountID).c_str(), debtID.c_str());
+		redisFree(c);
 	}
 
 	/**
@@ -197,6 +215,7 @@ namespace DAL{
 	 */
 	bool updateAccount(std::string accountID, std::map<AccountValues, std::string> &vals){
 		bool badEmail = false;
+		redisContext *c = redisConnect("localhost",6379);
 		for ( std::map<AccountValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 			if(it->first != email) { //if the value we're looking at is NOT email
@@ -217,23 +236,28 @@ namespace DAL{
 				}
 			}
 		}
+		redisFree(c);
 		return badEmail;
 	}
 
 	/*Updates debt info*/
 	void updateDebt(std::string accountID, std::string debtID, std::map<DebtValues, std::string> &vals){
+		redisContext *c = redisConnect("localhost",6379);
 		for ( std::map<DebtValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 		   redisCommand(c,"HSET %s %s %s",debtInfo(accountID, debtID).c_str(), debtKeys[it->first].c_str(), vals[it->first].c_str());
 		}
+		redisFree(c);
 	}
 
 	/*Updates income Info*/
 	void updateIncome(std::string accountID, std::string incomeID, std::map<IncomeValues, std::string> &vals){
+		redisContext *c = redisConnect("localhost",6379);
 		for ( std::map<IncomeValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 		   redisCommand(c, "HSET %s %s %s", incomeInfo(accountID, incomeID).c_str(), incomeKeys[it->first].c_str(), vals[it->first].c_str());
 		}
+		redisFree(c);
 	}
 
 }
