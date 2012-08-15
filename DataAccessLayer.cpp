@@ -101,7 +101,7 @@ namespace DAL{
 	std::string createAccount(std::map<AccountValues, std::string> &vals){
 		//TODO check if email is already registered in idLookupHash!
 
-		if(redisCommand(c,"HGET idLookupHash %s",vals[email].c_str())->type != REDIS_REPLY_NIL)
+		if(redisCommand(c,"HGET %s %s",idLookupHash().c_str(),vals[email].c_str())->type != REDIS_REPLY_NIL)
 			return "-1"; //returns an invalid ID to signify an error, namely that the email already belongs to a registered user
 
 		std::string accountID = createAccountID();//accountID for this user.
@@ -111,7 +111,7 @@ namespace DAL{
 		   redisCommand(c, "HSET %s %s %s",accountInfo(accountID).c_str(), accountKeys[it->first].c_str(), vals[it->first].c_str());
 		}
 
-		redisCommand(c, "HSET idLookupHash %s %s",vals[email].c_str(), accountID.c_str());//table for getting accountID from email
+		redisCommand(c, "HSET %s %s %s",idLookupHash().c_str(), vals[email].c_str(), accountID.c_str());//table for getting accountID from email
 
 		return accountID;
 	}
@@ -191,6 +191,10 @@ namespace DAL{
 		redisCommand(c, "LPUSH %s %s",unregisteredDebtIDs(accountID).c_str(), debtID.c_str());
 	}
 
+	/**
+	 * Given an ID and a map of accountValue String pairs,
+	 * this function updates a corresponding account.
+	 */
 	bool updateAccount(std::string accountID, std::map<AccountValues, std::string> &vals){
 		bool badEmail = false;
 		for ( std::map<AccountValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
@@ -216,6 +220,7 @@ namespace DAL{
 		return badEmail;
 	}
 
+	/*Updates debt info*/
 	void updateDebt(std::string accountID, std::string debtID, std::map<DebtValues, std::string> &vals){
 		for ( std::map<DebtValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
@@ -223,6 +228,7 @@ namespace DAL{
 		}
 	}
 
+	/*Updates income Info*/
 	void updateIncome(std::string accountID, std::string incomeID, std::map<IncomeValues, std::string> &vals){
 		for ( std::map<IncomeValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
