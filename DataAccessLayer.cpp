@@ -191,19 +191,15 @@ namespace DAL{
 	}
 
 	void updateAccount(std::string accountID, AccountValues field, std::string value){
-		redisCommand(c, ("HSET account:"+accountID+":info "+accountKeys[field]+" \""+value+"\"").c_str());
+		redisCommand(c,"HSET account:%s:info %s %s",accountID.c_str(),accountKeys[field].c_str(),value.c_str());
 	}
 
 	void updateDebt(std::string accountID, std::string debtID, DebtValues field, std::string value){
-		redisCommand(c, ("HSET account:"+accountID+":debt:"+debtID+" "+debtKeys[field]+" \""+value+"\"").c_str());
+		redisCommand(c,"HSET account:%s:debt:%s %s %s",accountID.c_str(),debtID.c_str(),debtKeys[field].c_str(),value.c_str());
 	}
 
 	void updateIncome(std::string accountID, std::string incomeID, IncomeValues field, std::string value){
-		redisReply *reply;
-		std::string command = "HSET account:%s:income:%s %s %s",accountID,incomeID,incomeKeys[field],value;
-		std::cout<<command<<std::endl;
-		reply = redisCommand(c, (command).c_str());
-		std::cout<<reply->str<<std::endl;
+		redisCommand(c,"HSET account:%s:income:%s %s %s",accountID.c_str(),incomeID.c_str(),incomeKeys[field].c_str(),value.c_str());
 	}
 
 }
