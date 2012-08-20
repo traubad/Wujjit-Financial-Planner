@@ -52,6 +52,11 @@ namespace DAL{
 	void updateDebt(std::string accountID, std::string debtID, std::map<Debt_Values::DebtValues, std::string> &vals);
 	void updateIncome(std::string accountID, std::string incomeID, std::map<Income_Values::IncomeValues, std::string> &vals);
 
+	std::map<Account_Values::AccountValues, std::string> getAccountInfo(std::string accountID);
+	std::vector<std::map<Debt_Values::DebtValues, std::string> > getDebtInfo(std::string debtID);
+	std::vector<std::map<Income_Values::IncomeValues, std::string> > getIncomeInfo(std::string accountID);
+
+
 	namespace Redis_Keys{
 
 		inline std::string idLookupHash(){ return "idLookupHash"; }
