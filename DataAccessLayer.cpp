@@ -301,21 +301,22 @@ namespace DAL{
 		std::cout<<"CONNECTED TO REDIS"<<std::endl;
 
 
-		std::cout<< redisCommand(c, "ECHO HELLO WORLD!")->str <<std::endl;
+		std::cout<< redisCommand(c, "ECHO HELLO FROM REDIS!")->str <<std::endl;
 
 		incomeNames = redisCommand(c, "KEYS %s", incomeInfo(accountID,"*").c_str());
 
 
-		int DEBUG = 0;
-
-
-
 		for(unsigned int i=0; i < incomeNames->elements; i++){
+<<<<<<< HEAD
 
 			std::cout<<DEBUG++<<std::endl;
 
 			IncomeValueMap tempMap; //purposely re-define the variable at the loop scope each iteration
 			for ( IncomeValueMap::iterator it = incomeKeys.begin(); it != incomeKeys.end(); it++){
+=======
+			std::map<IncomeValues, std::string> tempMap; //purposely re-define the variable at the loop scope each iteration
+			for ( std::map<IncomeValues, std::string>::iterator it = incomeKeys.begin(); it != incomeKeys.end(); it++){
+>>>>>>> aca81cad0da77a4dc723f6c85d8a0fe25278c5f9
 				tempMap[it->first] = hGetAndCorrect(c, incomeNames->element[i]->str, incomeKeys[it->first]);
 			}
 			incomeData.push_back(tempMap);
