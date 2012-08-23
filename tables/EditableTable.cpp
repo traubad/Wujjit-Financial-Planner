@@ -39,7 +39,7 @@ void EditableTable::stageForUpdate(EditableCell* updated_cell)
 
 void EditableTable::updateDatabase()
 {
-	for (int i=0; i < stagedForUpdate.size(); i++){
+	for (unsigned int i=0; i < stagedForUpdate.size(); i++){
 		//update the database with their new value.
 		stagedForUpdate[i]->display_input();
 	}

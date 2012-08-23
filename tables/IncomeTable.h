@@ -11,10 +11,8 @@
 	#include "EditableTable.h"
 
 	class IncomeTable : public EditableTable {
-		protected:
-			void getData();
-			public:
-				IncomeTable(Wt::WContainerWidget *parent=0);
+		public:
+			IncomeTable(Wt::WContainerWidget *parent=0);
 };
 
 #endif /* INCOMETABLE_H_ */

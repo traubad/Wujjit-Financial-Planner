@@ -9,37 +9,46 @@
 #include <Wt/WTable>
 #include <Wt/WText>
 #include <sstream>
+#include "../DataAccessLayer.h"
 #include "EditableCell.h"
 #include "IncomeTable.h"
+#include "../Declarations.h"
 
+using namespace Enums::Income_Values;
 using std::stringstream;
 
 //class IncomeTable
 IncomeTable::IncomeTable(Wt::WContainerWidget *parent)
 : EditableTable(parent)
 {
-	int columns = 4;
-	int rows = 5;
 	stringstream strm;
-	setHeaderCount(1);
+	std::string id = "1";
+	std::cout<<"SOMETHING WILL BREAK"<<std::endl;
+	std::vector<std::map<Income_Values::IncomeValues, std::string> > incomeData = DAL::getIncomeInfo(id);
+	std::cout<<"SOMETHING BROKE"<<std::endl;
 
-	//populate header
-	for (int c=1;c<columns+1;c++){
-		strm.str("");
-		strm << "Column: " << c;
-		elementAt(0,c)->addWidget(new Wt::WText(strm.str()));
+	int columns = 3;
+	int rows = 3;
+
+	setHeaderCount(1);
+	elementAt(0,income_source)->addWidget(new Wt::WText("Income Source"));
+	elementAt(0,amount)->addWidget(new Wt::WText("Amount"));
+	elementAt(0,savings)->addWidget(new Wt::WText("Savings"));
+
+	/*
+	for (int row = 1; row < incomeData.size()+1; row++){
+		elementAt(row,amount)->addWidget(new EditableCell("test"));
 	}
+
 
 	//populate table
 	for (int row = 1; row < rows+1; row++) {
-		for (int column = 1; column < columns+1; ++column) {
+		for (int column = 0; column < columns; column++) {
 			strm.str("");
 			strm << "Item: "<< row <<","<<column;
 			elementAt(row,column)->addWidget(new EditableCell(strm.str()));
 		}
 	}
-}
-void IncomeTable::getData()
-{
+	*/
 }
 

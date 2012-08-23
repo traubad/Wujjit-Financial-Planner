@@ -37,7 +37,6 @@ void EditableCell::get_input()
      * by passing the currently displayed value into the input field
      */
 	_stage_for_update.emit(this);
-	updatedByUser();//wrong?
 
 	Wt::WText* text_display = (Wt::WText*) widget(0); // get the display object
 	Wt::WLineEdit* input_field = (Wt::WLineEdit*) widget(1); // get the input object

@@ -7,7 +7,6 @@
 
 #ifndef NAV_H_
 #define NAV_H_
-#endif /* NAV_H_ */
 
 class Nav : public Wt::WApplication{
 
@@ -15,3 +14,4 @@ class Nav : public Wt::WApplication{
 		Nav(const Wt::WEnvironment& env);
 };
 
+#endif /* NAV_H_ */

@@ -8,27 +8,11 @@
 #ifndef DATAACCESSLAYER_H_
 #define DATAACCESSLAYER_H_
 
-#include <vector>
-#include <map>
+#include "Declarations.h"
+
+using namespace Enums;
+
 namespace DAL{
-
-	namespace Account_Values {
-		enum AccountValues{
-			name, email, phone, monthlyEmail, emailOnUpdate
-		};
-	}
-
-	namespace Debt_Values {
-		enum DebtValues {
-			debt_source, balance, apr, minimum_payment, extra_payment, due_date, payment_scheduled, payment_processed
-		};
-	}
-
-	namespace Income_Values {
-		enum IncomeValues {
-			income_source, amount, savings
-		};
-	}
 
 	void initialize();
 
@@ -55,6 +39,8 @@ namespace DAL{
 	std::map<Account_Values::AccountValues, std::string> getAccountInfo(std::string accountID);
 	std::vector<std::map<Debt_Values::DebtValues, std::string> > getDebtInfo(std::string debtID);
 	std::vector<std::map<Income_Values::IncomeValues, std::string> > getIncomeInfo(std::string accountID);
+
+	std::string hGetAndCorrect(redisContext *C, std::string hash, std::string key);
 
 
 	namespace Redis_Keys{

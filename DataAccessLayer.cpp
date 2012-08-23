@@ -10,14 +10,14 @@
 #include <iostream>
 #include <string>
 #include <map>
-#include <hiredis/hiredis.h>
+#include "Declarations.h"
 #include "DataAccessLayer.h"
+#include <typeinfo>
 
 using namespace DAL::Redis_Keys;
-
-using namespace DAL::Account_Values;
-using namespace DAL::Debt_Values;
-using namespace DAL::Income_Values;
+using namespace Account_Values;
+using namespace Debt_Values;
+using namespace Income_Values;
 
 namespace DAL{
 
@@ -153,7 +153,7 @@ namespace DAL{
 	/*gets a user ID from an email address*/
 	std::string getIDFromEmail(std::string email){
 		redisContext *c = redisConnect(database.c_str(), port);
-		std::string id = redisCommand(c, "HGET %s %s",idLookupHash().c_str(), email.c_str())->str;
+		std::string id = hGetAndCorrect(c,idLookupHash(), email);
 		redisFree(c);
 		return id;
 	}
@@ -218,7 +218,7 @@ namespace DAL{
 	 * Given an ID and a map of accountValue String pairs,
 	 * this function updates a corresponding account*/
 	bool updateAccount(std::string accountID, std::map<AccountValues, std::string> &vals){
-		bool badEmail = false;
+		bool isbadEmail = false;
 		redisContext *c = redisConnect(database.c_str(), port);
 		for ( std::map<AccountValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
 		{
@@ -236,12 +236,12 @@ namespace DAL{
 					//update the lookupHash's entry for the new email
 					redisCommand(c,"HSET %s %s %s",idLookupHash().c_str(), vals[email].c_str(), accountID.c_str());
 				} else {
-					badEmail = true;
+					isbadEmail = true;
 				}
 			}
 		}
 		redisFree(c);
-		return badEmail;
+		return isbadEmail;
 	}
 
 	/*Updates debt info*/
@@ -269,7 +269,7 @@ namespace DAL{
 		std::map<AccountValues, std::string> accountData;
 
 		for ( std::map<AccountValues, std::string>::iterator it = accountKeys.begin(); it != accountKeys.end(); it++){
-			accountData[it->first] = redisCommand(c, "HGET %s %s", accountInfo(accountID).c_str(), accountKeys[it->first].c_str())->str;
+			accountData[it->first] = hGetAndCorrect(c, accountInfo(accountID), accountKeys[it->first]);
 		}
 
 		redisFree(c);
@@ -286,7 +286,7 @@ namespace DAL{
 		for(unsigned int i=0; i < debtNames->elements; i++){
 			std::map<DebtValues, std::string> tempMap; //purposely re-define the variable at the loop scope each iteration
 			for ( std::map<DebtValues, std::string>::iterator it = debtKeys.begin(); it != debtKeys.end(); it++){
-				tempMap[it->first] = redisCommand(c, "HGET %s %s", debtNames->element[i]->str, debtKeys[it->first].c_str())->str;
+				tempMap[it->first] = hGetAndCorrect(c, debtNames->element[i]->str, debtKeys[it->first]);
 			}
 			debtData.push_back(tempMap);
 		}
@@ -300,14 +300,25 @@ namespace DAL{
 		std::vector<std::map<IncomeValues, std::string> > incomeData;
 		redisReply *incomeNames;
 
+		std::cout<<"CONNECTED TO REDIS"<<std::endl;
+
+
+		std::cout<< redisCommand(c, "ECHO HELLO WORLD!")->str <<std::endl;
+
 		incomeNames = redisCommand(c, "KEYS %s", incomeInfo(accountID,"*").c_str());
 
+
+		int DEBUG = 0;
+
+
+
 		for(unsigned int i=0; i < incomeNames->elements; i++){
+
+			std::cout<<DEBUG++<<std::endl;
+
 			std::map<IncomeValues, std::string> tempMap; //purposely re-define the variable at the loop scope each iteration
-			std::cout<<incomeNames->element[i]->str<<std::endl;
 			for ( std::map<IncomeValues, std::string>::iterator it = incomeKeys.begin(); it != incomeKeys.end(); it++){
-				std::cout<<incomeKeys[it->first]<<std::endl;
-				tempMap[it->first] = redisCommand(c, "HGET %s %s", incomeNames->element[i]->str, incomeKeys[it->first].c_str())->str;
+				tempMap[it->first] = hGetAndCorrect(c, incomeNames->element[i]->str, incomeKeys[it->first]);
 			}
 			incomeData.push_back(tempMap);
 		}
@@ -315,5 +326,24 @@ namespace DAL{
 		redisFree(c);
 		return incomeData;
 	}
+
+	std::string hGetAndCorrect(redisContext *c, std::string hash, std::string key){
+		redisReply *reply;
+		reply = redisCommand(c, "HGET %s %s",hash.c_str(), key.c_str());
+		std::string output;
+
+		if(reply->type == REDIS_REPLY_NIL){
+			output = "NA";
+			//TODO log an error!  Missing value
+			redisCommand(c, "HSET %s %s %s",hash.c_str(), key.c_str(), output.c_str());
+		} else {
+			output = reply->str;
+		}
+
+		freeReplyObject(reply);
+		return output;
+	}
+
+
 
 }
