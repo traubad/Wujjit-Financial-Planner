@@ -4,13 +4,11 @@
  *  Created on: Aug 1, 2012
  *      Author: adamtraub
  */
+#include "Declarations.h"
 
 #include <stdio.h>
 #include <sstream>
 #include <iostream>
-#include <string>
-#include <map>
-#include "Declarations.h"
 #include "DataAccessLayer.h"
 #include <typeinfo>
 
@@ -24,9 +22,9 @@ namespace DAL{
 	bool notInitialized = true;
 
 	/*Maps that relate enumerators to redis database fields*/
-	std::map<AccountValues, std::string> accountKeys;
-	std::map<DebtValues, std::string> debtKeys;
-	std::map<IncomeValues, std::string> incomeKeys;
+    AcctValueMap accountKeys;
+    DebtValueMap debtKeys;
+    IncomeValueMap incomeKeys;
 
 	std::string database;
 	int port;
@@ -105,7 +103,7 @@ namespace DAL{
 	}
 
 	/*Creates a new User in redis*/
-	std::string createAccount(std::map<AccountValues, std::string> &vals){
+	std::string createAccount(ActtValueMap &vals){
 		redisContext *c = redisConnect(database.c_str(), port);
 
 		if(redisCommand(c,"HGET %s %s",idLookupHash().c_str(),vals[email].c_str())->type != REDIS_REPLY_NIL)
@@ -113,7 +111,7 @@ namespace DAL{
 
 		std::string accountID = createAccountID();//accountID for this user.
 
-		for ( std::map<AccountValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		for ( AcctValueMap::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 		   redisCommand(c, "HSET %s %s %s",accountInfo(accountID).c_str(), accountKeys[it->first].c_str(), vals[it->first].c_str());
 		}
@@ -127,10 +125,10 @@ namespace DAL{
 	}
 
 	/*Adds a source of debt to a given user in Redis*/
-	std::string addDebt(std::string accountID, std::map<DebtValues, std::string> &vals){
+	std::string addDebt(std::string accountID, DebtValueMap &vals){
 		std::string debtID = createDebtID(accountID);
 		redisContext *c = redisConnect(database.c_str(), port);
-		for ( std::map<DebtValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		for ( DebtValueMap::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 		   redisCommand(c,"HSET %s %s %s",debtInfo(accountID, debtID).c_str(), debtKeys[it->first].c_str(), vals[it->first].c_str());
 		}
@@ -139,10 +137,10 @@ namespace DAL{
 	}
 
 	/*Adds a source of income to a given user in Redis*/
-	std::string addIncome(std::string accountID, std::map<IncomeValues, std::string> &vals){
+	std::string addIncome(std::string accountID, IncomeValueMap &vals){
 		std::string incomeID = createIncomeID(accountID);
 		redisContext *c = redisConnect(database.c_str(), port);
-		for ( std::map<IncomeValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		for ( IncomeValueMap::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 		   redisCommand(c, "HSET %s %s %s", incomeInfo(accountID, incomeID).c_str(), incomeKeys[it->first].c_str(), vals[it->first].c_str());
 		}
@@ -217,10 +215,10 @@ namespace DAL{
 	/**
 	 * Given an ID and a map of accountValue String pairs,
 	 * this function updates a corresponding account*/
-	bool updateAccount(std::string accountID, std::map<AccountValues, std::string> &vals){
+	bool updateAccount(std::string accountID, AcctValueMap &vals){
 		bool isbadEmail = false;
 		redisContext *c = redisConnect(database.c_str(), port);
-		for ( std::map<AccountValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		for ( AcctValueMap::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 			if(it->first != email) { //if the value we're looking at is NOT email
 				redisCommand(c, "HSET %s %s %s",accountInfo(accountID).c_str(), accountKeys[it->first].c_str(), vals[it->first].c_str());
@@ -245,9 +243,9 @@ namespace DAL{
 	}
 
 	/*Updates debt info*/
-	void updateDebt(std::string accountID, std::string debtID, std::map<DebtValues, std::string> &vals){
+	void updateDebt(std::string accountID, std::string debtID, DebtValueMap &vals){
 		redisContext *c = redisConnect(database.c_str(), port);
-		for ( std::map<DebtValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		for ( DebtValueMap::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 		   redisCommand(c,"HSET %s %s %s",debtInfo(accountID, debtID).c_str(), debtKeys[it->first].c_str(), vals[it->first].c_str());
 		}
@@ -255,20 +253,20 @@ namespace DAL{
 	}
 
 	/*Updates income Info*/
-	void updateIncome(std::string accountID, std::string incomeID, std::map<IncomeValues, std::string> &vals){
+	void updateIncome(std::string accountID, std::string incomeID, IncomeValueMap &vals){
 		redisContext *c = redisConnect(database.c_str(), port);
-		for ( std::map<IncomeValues, std::string>::iterator it = vals.begin(); it != vals.end(); it++)
+		for ( IncomeValueMap::iterator it = vals.begin(); it != vals.end(); it++)
 		{
 		   redisCommand(c, "HSET %s %s %s", incomeInfo(accountID, incomeID).c_str(), incomeKeys[it->first].c_str(), vals[it->first].c_str());
 		}
 		redisFree(c);
 	}
 
-	std::map<AccountValues, std::string> getAccountInfo(std::string accountID){
+	AcctValueMap getAccountInfo(std::string accountID){
 		redisContext *c = redisConnect(database.c_str(), port);
-		std::map<AccountValues, std::string> accountData;
+		AcctValueMap accountData;
 
-		for ( std::map<AccountValues, std::string>::iterator it = accountKeys.begin(); it != accountKeys.end(); it++){
+		for ( AcctValueMap::iterator it = accountKeys.begin(); it != accountKeys.end(); it++){
 			accountData[it->first] = hGetAndCorrect(c, accountInfo(accountID), accountKeys[it->first]);
 		}
 
@@ -276,15 +274,15 @@ namespace DAL{
 		return accountData;
 	}
 
-	std::vector<std::map<DebtValues, std::string> > getDebtInfo(std::string accountID){
+	DebtValMapVec getDebtInfo(std::string accountID){
 		redisContext *c = redisConnect(database.c_str(), port);
-		std::vector<std::map<DebtValues, std::string> > debtData;
+		DebtValMapVec debtData;
 		redisReply *debtNames;
 
 		debtNames = redisCommand(c, "KEYS %s", debtInfo(accountID,"*").c_str());
 
 		for(unsigned int i=0; i < debtNames->elements; i++){
-			std::map<DebtValues, std::string> tempMap; //purposely re-define the variable at the loop scope each iteration
+			DebtValueMap tempMap; //purposely re-define the variable at the loop scope each iteration
 			for ( std::map<DebtValues, std::string>::iterator it = debtKeys.begin(); it != debtKeys.end(); it++){
 				tempMap[it->first] = hGetAndCorrect(c, debtNames->element[i]->str, debtKeys[it->first]);
 			}
@@ -295,9 +293,9 @@ namespace DAL{
 		return debtData;
 	}
 
-	std::vector<std::map<IncomeValues, std::string> > getIncomeInfo(std::string accountID){
+	IncomeValMapVec getIncomeInfo(std::string accountID){
 		redisContext *c = redisConnect(database.c_str(), port);
-		std::vector<std::map<IncomeValues, std::string> > incomeData;
+		IncomeValMapVec incomeData;
 		redisReply *incomeNames;
 
 		std::cout<<"CONNECTED TO REDIS"<<std::endl;
@@ -316,8 +314,8 @@ namespace DAL{
 
 			std::cout<<DEBUG++<<std::endl;
 
-			std::map<IncomeValues, std::string> tempMap; //purposely re-define the variable at the loop scope each iteration
-			for ( std::map<IncomeValues, std::string>::iterator it = incomeKeys.begin(); it != incomeKeys.end(); it++){
+			IncomeValueMap tempMap; //purposely re-define the variable at the loop scope each iteration
+			for ( IncomeValueMap::iterator it = incomeKeys.begin(); it != incomeKeys.end(); it++){
 				tempMap[it->first] = hGetAndCorrect(c, incomeNames->element[i]->str, incomeKeys[it->first]);
 			}
 			incomeData.push_back(tempMap);
