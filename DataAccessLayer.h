@@ -15,16 +15,16 @@ using namespace Enums;
 namespace DAL{
 
 	void initialize();
-
+    
 	std::string createID(std::string unregisteredList, std::string incrementingID);
 
 	std::string createAccountID();
 	std::string createDebtID(std::string accountID);
 	std::string createIncomeID(std::string accountID);
 
-	std::string createAccount(std::map<Account_Values::AccountValues, std::string> &vals);
-	std::string addDebt(std::string accountID, std::map<Debt_Values::DebtValues, std::string> &vals);
-	std::string addIncome(std::string accountID, std::map<Income_Values::IncomeValues, std::string> &vals);
+    std::string createAccount(AcctValueMap& vals);
+	std::string addDebt(std::string accountID, DebtValueMap &vals);
+	std::string addIncome(std::string accountID, IncomeValueMap &vals);
 
 	std::string getIDFromEmail(std::string email);
 
@@ -32,15 +32,15 @@ namespace DAL{
 	void deleteIncome(std::string accountID, std::string incomeID);
 	void deleteDebt(std::string accountID, std::string debtID);
 
-	bool updateAccount(std::string accountID, std::map<Account_Values::AccountValues, std::string> &vals);
-	void updateDebt(std::string accountID, std::string debtID, std::map<Debt_Values::DebtValues, std::string> &vals);
-	void updateIncome(std::string accountID, std::string incomeID, std::map<Income_Values::IncomeValues, std::string> &vals);
+	bool updateAccount(std::string accountID, AcctValueMap &vals);
+	void updateDebt(std::string accountID, std::string debtID, DebtValueMap &vals);
+	void updateIncome(std::string accountID, std::string incomeID, IncomeValueMap &vals);
 
-	std::map<Account_Values::AccountValues, std::string> getAccountInfo(std::string accountID);
-	std::vector<std::map<Debt_Values::DebtValues, std::string> > getDebtInfo(std::string debtID);
-	std::vector<std::map<Income_Values::IncomeValues, std::string> > getIncomeInfo(std::string accountID);
-
-	std::string hGetAndCorrect(redisContext *C, std::string hash, std::string key);
+    AcctValueMap getAccountInfo(std::string accountID);
+    DebtValMapVec getDebtInfo(std::string debtID);
+    IncomeValMapVec getIncomeInfo(std::string accountID);
+	
+    std::string hGetAndCorrect(redisContext *C, std::string hash, std::string key);
 
 
 	namespace Redis_Keys{
