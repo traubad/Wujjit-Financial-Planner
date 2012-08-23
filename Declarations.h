@@ -11,8 +11,6 @@
 #include <map>
 #include <string>
 #include <vector>
-#include <hiredis/hiredis.h>
-
 #include "Enums.h"
 
 class redisContext;
@@ -29,4 +27,11 @@ namespace Wt
     class WAnchor;
 }
 
+typedef std::map <Account_Values::AccountValues, std::string> AcctValueMap;
+
+typedef std::map <Debt_Values::DebtValues, std::string> DebtValueMap;
+typedef std::map <Income_Values::IncomeValues, std::string> IncomeValueMap;
+typedef std::vector <AcctValueMap> AcctValMapVec;
+typedef std::vector <DebtValueMap> DebtValMapVec;
+typedef std::vector <IncomeValueMap> IncomeValMapVec;
 #endif /* DECLARATIONS_H_ */
